@@ -2,7 +2,7 @@
   "name": "frontend",
   "private": true,
   "version": "0.0.0",
-  "description": "Smart Student Job Agent Platform connecting students with flexible internships and jobs.",
+  "description": "Smart Student Job Agent Platform connecting students with flexible part-time jobs that fit their academic schedule.",
   "type": "module",
   "scripts": {
     "dev": "vite",

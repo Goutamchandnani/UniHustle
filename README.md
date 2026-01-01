@@ -1,6 +1,6 @@
 # UniHustle 🎓💼
 
-**UniHustle** is a Smart Student Job Agent Platform designed to help students find internships and part-time jobs that fit their schedule and career goals.
+**UniHustle** is a Smart Student Job Agent Platform designed to help students find **part-time jobs** and internships that perfectly fit their academic schedule and financial needs.
 
 ## 🚀 Features
 
