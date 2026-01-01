@@ -1,0 +1,13 @@
+flask==3.0.0
+sqlalchemy
+flask-sqlalchemy
+psycopg2-binary
+python-dotenv
+flask-migrate
+celery
+redis
+flask-cors
+marshmallow
+webargs
+faker
+flask-jwt-extended
