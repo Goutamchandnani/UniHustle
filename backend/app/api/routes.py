@@ -272,6 +272,13 @@ def handle_preferences():
                 prefs.preferred_roles = ",".join(roles)
             else:
                 prefs.preferred_roles = roles
+        
+        if 'preferred_locations' in data:
+            locs = data['preferred_locations']
+            if isinstance(locs, list):
+                prefs.preferred_locations = ",".join(locs)
+            else:
+                prefs.preferred_locations = locs
             
         db.session.commit()
         return jsonify({"message": "Preferences updated"}), 200
@@ -289,7 +296,8 @@ def handle_profile():
             "course": student.course,
             "year_of_study": student.year_of_study,
             "visa_status": student.visa_status,
-            "weekly_hours_limit": student.weekly_hours_limit
+            "weekly_hours_limit": student.weekly_hours_limit,
+            "postcode": student.postcode
         })
     
     if request.method == 'PUT':

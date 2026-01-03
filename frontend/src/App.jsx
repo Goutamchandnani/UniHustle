@@ -9,6 +9,7 @@ import Signup from './pages/Signup';
 import Jobs from './pages/Jobs';
 import Applications from './pages/Applications';
 import Onboarding from './pages/Onboarding';
+import Profile from './pages/Profile';
 import PrivateRoute from './components/PrivateRoute';
 
 // Private Route Component
@@ -22,6 +23,7 @@ import PrivateRoute from './components/PrivateRoute';
 const Layout = ({ children }) => {
   const { logout, user } = useAuth();
   const location = useLocation();
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
 
   const getNavItemClass = (path) => {
     // Exact match for root, partial for others if needed, but exact is safer for these top-level items
@@ -52,19 +54,43 @@ const Layout = ({ children }) => {
                 </Link>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600">
+            <div className="flex items-center gap-4 relative">
+              <span className="text-sm text-slate-600 hidden md:block">
                 {user?.first_name || 'User'}
               </span>
+
+              {/* Dropdown Trigger */}
               <button
-                onClick={logout}
-                className="text-sm text-red-600 hover:text-red-800"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="h-9 w-9 rounded-full bg-sky-100 border border-sky-200 flex items-center justify-center text-sky-700 font-medium hover:bg-sky-200 transition-colors focus:outline-none"
               >
-                Logout
-              </button>
-              <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
                 {user?.first_name ? user.first_name[0] : 'U'}
-              </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute top-12 right-0 w-48 bg-white rounded-md shadow-lg border border-slate-100 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-slate-50 md:hidden">
+                    <p className="text-sm font-semibold text-slate-900">{user?.first_name}</p>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    Edit Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      logout();
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -122,6 +148,14 @@ function App() {
             <PrivateRoute>
               <Layout>
                 <Applications />
+              </Layout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <Layout>
+                <Profile />
               </Layout>
             </PrivateRoute>
           } />
