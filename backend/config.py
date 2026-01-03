@@ -30,6 +30,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    CELERY_TASK_ALWAYS_EAGER = True # Run tasks synchronously for local dev (no redis needed)
 
 class ProductionConfig(Config):
     DEBUG = False

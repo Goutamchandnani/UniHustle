@@ -36,6 +36,8 @@ class StudentPreferences(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     preferred_locations = db.Column(db.Text) # JSON or comma-separated
+    primary_city = db.Column(db.String(100))
+    open_to_other_cities = db.Column(db.Boolean, default=False)
     preferred_roles = db.Column(db.Text) # JSON or comma-separated
     min_salary = db.Column(db.Float)
     max_commute_time = db.Column(db.Integer) # in minutes

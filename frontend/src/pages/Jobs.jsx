@@ -9,11 +9,28 @@ const Jobs = () => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [showOthers, setShowOthers] = useState(false);
+
+    // Grouping
+    const sortJobs = (allJobs) => {
+        const t1 = [], t2 = [], t3 = [], t4 = [];
+        allJobs.forEach(job => {
+            const tier = job.match_breakdown?.location_data?.tier || 5;
+            if (tier === 1) t1.push(job);
+            else if (tier === 2) t2.push(job);
+            else if (tier === 3 || tier === 4) t3.push(job); // Nearby + Tier 4
+            else t4.push(job);
+        });
+        return { tier1: t1, tier2: t2, tier3: t3, others: t4 };
+    };
+
+    const { tier1, tier2, tier3, others } = React.useMemo(() => sortJobs(jobs), [jobs]);
+
     useEffect(() => {
         const fetchJobs = async () => {
             try {
-                // Fetch all jobs (for now, maybe paginated later)
-                const response = await api.get('/jobs?per_page=50');
+                // Fetch all jobs (increased limit for better visibility)
+                const response = await api.get('/jobs?per_page=100');
                 setJobs(response.data.jobs);
             } catch (err) {
                 console.error("Failed to load jobs", err);
@@ -50,17 +67,89 @@ const Jobs = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {jobs.length > 0 ? (
-                    jobs.map(job => (
-                        <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
-                    ))
-                ) : (
-                    <div className="col-span-full text-center py-12 text-slate-500">
-                        No jobs found.
+            {/* Tier 1: Remote & Primary City */}
+            {tier1.length > 0 && (
+                <section>
+                    <div className="flex items-center gap-2 mb-4">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            📍 Perfect Location Matches
+                        </h2>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                            {tier1.length}
+                        </span>
                     </div>
-                )}
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tier1.map(job => (
+                            <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Tier 2: Preferred Cities */}
+            {tier2.length > 0 && (
+                <section>
+                    <div className="flex items-center gap-2 mb-4 mt-8">
+                        <h2 className="text-xl font-bold text-slate-900">⭐ Preferred Cities</h2>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                            {tier2.length}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tier2.map(job => (
+                            <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Tier 3: Nearby Cities (Expandable, but sticking to simple for now as per snippet) */}
+            {tier3.length > 0 && (
+                <section>
+                    <div className="flex items-center gap-2 mb-4 mt-8">
+                        <h2 className="text-xl font-bold text-slate-900">🚍 Nearby Matches</h2>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                            {tier3.length}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tier3.map(job => (
+                            <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Tier 4+: Other (Hidden by toggle if huge, but let's show for now) */}
+            {others.length > 0 && (
+                <section>
+                    <button
+                        onClick={() => setShowOthers(!showOthers)}
+                        className="flex items-center gap-2 mb-4 mt-8 hover:text-primary-600 transition-colors"
+                    >
+                        <h2 className="text-xl font-bold text-slate-700">
+                            {showOthers ? '▼' : '▶'} Other Locations
+                        </h2>
+                        <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                            {others.length}
+                        </span>
+                    </button>
+
+                    {showOthers && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 opacity-80 lg:opacity-100">
+                            {others.map(job => (
+                                <JobCard key={job.id} job={job} onClick={() => navigate(`/jobs/${job.id}`)} />
+                            ))}
+                        </div>
+                    )}
+                </section>
+            )}
+
+            {jobs.length === 0 && (
+                <div className="col-span-full text-center py-12 text-slate-500">
+                    No jobs found.
+                </div>
+            )}
         </div>
     );
 };

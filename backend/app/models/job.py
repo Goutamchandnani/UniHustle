@@ -19,6 +19,8 @@ class Job(db.Model):
     location = db.Column(db.String(128))
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
+    is_remote = db.Column(db.Boolean, default=False)
+    remote_type = db.Column(db.String(50)) # 'full_remote', 'hybrid'
     
     # Source (for aggregation)
     source = db.Column(db.String(64), default='Internal') # Custom, Reed, Indeed

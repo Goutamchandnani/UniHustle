@@ -7,7 +7,7 @@ class ReedScraper(BaseScraper):
         super().__init__(source_name='Reed.co.uk')
         self.api_url = "https://www.reed.co.uk/api/1.0/search"
     
-    def fetch_jobs(self, keywords=None):
+    def fetch_jobs(self, keywords=None, location=None):
         api_key = current_app.config.get('REED_API_KEY')
         if not api_key:
             print("Warning: REED_API_KEY not found in config.")
@@ -15,25 +15,23 @@ class ReedScraper(BaseScraper):
 
         # Categories to search
         categories = keywords if keywords else [
-            'part time student', 
-            'retail part time', 
-            'barista part time', 
-            'tutor part time', 
-            'warehouse part time', 
-            'admin part time'
+            'part time student'
         ]
         
         all_results = []
         fetched_ids = set()
 
         for term in categories:
-            print(f"Fetching Reed jobs for: {term}")
+            print(f"Fetching Reed jobs for: '{term}' in '{location or 'UK'}'")
             params = {
                 'keywords': term,
-                'locationName': 'London',
-                'distanceFromLocation': 15, # Increased radius slightly
-                'contractType': 'PartTime'
+                'keywords': term,
+                'contractType': 'PartTime',
+                'resultsToTake': 100 # Fetch max allowed per page
             }
+            if location:
+                params['locationName'] = location
+                params['distanceFromLocation'] = 10 # 10 miles radius
             
             try:
                 response = requests.get(
@@ -81,4 +79,15 @@ class ReedScraper(BaseScraper):
         # Extract shifts
         normalized['shifts'] = _extract_shifts(normalized['description'])
         
+        # Remote Detection logic
+        title_lower = normalized['title'].lower() if normalized['title'] else ''
+        loc_lower = normalized['location'].lower() if normalized['location'] else ''
+        
+        if 'remote' in title_lower or 'work from home' in title_lower or 'remote' in loc_lower:
+             normalized['is_remote'] = True
+             normalized['remote_type'] = 'full_remote'
+        else:
+             normalized['is_remote'] = False
+             normalized['remote_type'] = None
+             
         return normalized

@@ -1,0 +1,28 @@
+--- DB Check ---
+Student: Gautam (ID: 15)
+Geo: 52.485563, -1.890214
+Total Birmingham Jobs: 2
+Sample Job: Front of House / Host (ID: 471)
+Sample Geo: 52.4862, -1.8904
+Score: 9.0
+Breakdown: {"schedule": 100, "location": 100, "skills": 100, "salary": 100, "preferences": 0, "location_data": {"tier": 1, "badge": "YOUR CITY", "badge_color": "green", "reason": "\ud83d\udccd In Birmingham (your city)"}}
+--- Top 5 API Results ---
+#526 Barista @ NN128TN | Score: 68.5
+   Breakdown: {"schedule": 100, "location": 30, "skills": 100, "salary": 100, "preferences": 100, "location_data": {"tier": 5, "badge": "OTHER", "badge_color": "gray", "reason": "\ud83d\udccd NN128TN (different region)"}}
+   [TIER 5] Badge: OTHER
+#524 Cafe Restaurant Manager @ B911LE | Score: 68.5
+   Breakdown: {"schedule": 100, "location": 30, "skills": 100, "salary": 100, "preferences": 100, "location_data": {"tier": 5, "badge": "OTHER", "badge_color": "gray", "reason": "\ud83d\udccd B911LE (different region)"}}
+   [TIER 5] Badge: OTHER
+#261 Barista/General Assistant @ Camden Town | Score: 68.5
+   Breakdown: {"schedule": 100, "location": 30, "skills": 100, "salary": 100, "preferences": 100, "location_data": {"tier": 5, "badge": "OTHER", "badge_color": "gray", "reason": "\ud83d\udccd Camden Town (different region)"}}
+   [TIER 5] Badge: OTHER
+#263 Barista @ South West London | Score: 68.5
+   Breakdown: {"schedule": 100, "location": 30, "skills": 100, "salary": 100, "preferences": 100, "location_data": {"tier": 5, "badge": "OTHER", "badge_color": "gray", "reason": "\ud83d\udccd South West London (different region)"}}
+   [TIER 5] Badge: OTHER
+#262 Barista @ South East London | Score: 68.5
+   Breakdown: {"schedule": 100, "location": 30, "skills": 100, "salary": 100, "preferences": 100, "location_data": {"tier": 5, "badge": "OTHER", "badge_color": "gray", "reason": "\ud83d\udccd South East London (different region)"}}
+   [TIER 5] Badge: OTHER
+--- Sample Bham Job Check ---
+ID: 471 | Active: True
+Score: 9.0
+--- End ---

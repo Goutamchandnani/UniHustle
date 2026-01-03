@@ -17,25 +17,39 @@ def scrape_jobs_task(self):
     logger.info("Starting scheduled job scrape...")
     try:
         # 1. Scrape Reed with Dynamic Keywords from Students
+        # 1. Scrape Reed with Targeted (Role + Location) from Students
         from app.models import StudentPreferences
         
-        # Get all unique preferred roles across all students
-        prefs = StudentPreferences.query.with_entities(StudentPreferences.preferred_roles).all()
-        keywords = set()
-        for p in prefs:
-            if p.preferred_roles:
-                # Splitting by comma if stored as CSV
-                roles = [r.strip() for r in p.preferred_roles.split(',')]
-                keywords.update(roles)
+        # Get all prefs
+        all_prefs = StudentPreferences.query.all()
         
-        # Add default fallback keywords to ensure we always get some jobs
-        defaults = {'part time student', 'retail part time', 'barista', 'tutor'}
-        keywords.update(defaults)
+        # Build unique search targets: set of (role, location)
+        targets = set()
         
-        logger.info(f"Scraping for keywords: {keywords}")
+        for p in all_prefs:
+            roles = [r.strip() for r in (p.preferred_roles or "").split(',') if r.strip()]
+            locs = [l.strip() for l in (p.preferred_locations or "").split(',') if l.strip()]
+            
+            # If no loc preferred, scrape UK wide (None)
+            if not locs:
+                locs = [None]
+                
+            for r in roles:
+                for l in locs:
+                    targets.add((r, l))
+        
+        logger.info(f"Targeted scrape list: {targets}")
 
         scraper = ReedScraper()
-        scraper.run(keywords=list(keywords))
+        
+        if not targets:
+            # Fallback if no users have prefs
+             scraper.run(keywords=['part time student'])
+        else:
+            for role, loc in targets:
+                # Scrape each target
+                # casting set to list for keywords arg
+                scraper.run(keywords=[role], location=loc)
         
         # 2. Trigger matching update
         calculate_matches_task.delay()

@@ -26,16 +26,28 @@ class MatchingEngine:
         )
         schedule_score = schedule_result['score']
 
-        # Extract max_commute and preferred_locations
-        max_commute = student_profile.get('preferences', {}).get('max_commute_time', 45)
-        pref_locs = student_profile.get('preferences', {}).get('locations', [])
+        # 2. Location Score (TIERED SYSTEM)
+        # Initialize City Matcher with user preferences
+        from .location_matcher import CityLocationMatcher
+        loc_matcher = CityLocationMatcher(student_profile.get('preferences', {}))
         
-        location_score = self._calculate_location_score(
-            student_profile.get('location', {}),
-            job_data.get('location', {}),
-            max_commute=max_commute,
-            preferred_locs=pref_locs
-        )
+        # Calculate Tiered Score
+        # We pass job_data because it contains 'is_remote' and raw 'location' dict
+        loc_result = loc_matcher.calculate_location_score(job_data)
+        
+        location_score = loc_result['score']
+        location_meta = {
+            'tier': loc_result['tier'],
+            'badge': loc_result['badge'],
+            'badge_color': loc_result['badge_color'],
+            'reason': loc_result['reason']
+        }
+        
+        if loc_result.get('excluded'):
+             # If strictly excluded, force total score to 0? Or just penalty?
+             # User requested "hidden by default", so implies it still exists but Low.
+             # But if score is 0, let's keep it 0.
+             pass
 
         # 3. Skills Score (20%)
         skills_score = self._calculate_skills_score(
@@ -67,62 +79,35 @@ class MatchingEngine:
             (pref_score * self.WEIGHTS['preferences'])
         )
 
-        # "Deanbreaker" Logic: If role preference is completely missed, punish the total score significantly.
+        # "Dealbreaker" Logic: If role preference is completely missed, punish the total score significantly.
         # This ensures users see "only" (or mostly) what they asked for.
         if pref_score == 0 and student_profile.get('preferences', {}).get('roles'):
              total_score *= 0.1 # 90% penalty for role mismatch
 
+        # Location Dealbreaker: If location is impossible (score 0), punish heavily too.
+        # New: Using Tier 6 (Excluded) to trigger this
+        if location_score == 0:
+             total_score *= 0.1 # Bury distant jobs
+             
+        # Add Location Meta to Breakdown for Frontend
+        breakdown = {
+            "schedule": schedule_score,
+            "location": location_score,
+            "skills": skills_score,
+            "salary": salary_score,
+            "preferences": pref_score,
+            "location_data": location_meta 
+        }
+
         return {
             "total_score": round(total_score, 1),
-            "breakdown": {
-                "schedule": schedule_score,
-                "location": location_score,
-                "skills": skills_score,
-                "salary": salary_score,
-                "preferences": pref_score
-            },
+            "breakdown": breakdown,
             "schedule_analysis": schedule_result['analysis']
         }
 
+    # Legacy method kept for backward compat if needed, or removed.
     def _calculate_location_score(self, user_loc: Dict, job_loc: Dict, max_commute: int = 45, preferred_locs: List[str] = None) -> int:
-        """
-        Score based on Estimated Commute Time vs User's Limit.
-        Also overrides if Job Location matches 'Preferred Work Location'.
-        """
-        # 0. Override: Explicit Preferred Location
-        if preferred_locs and job_loc.get('name'):
-            job_city = job_loc['name'].lower()
-            for loc in preferred_locs:
-                if loc.lower() in job_city:
-                    return 100 # User explicitly wants to work here 
-
-        if not user_loc or not job_loc or not user_loc.get('lat') or not job_loc.get('lat'):
-            return 50 # Neutral
-        
-        distance = self._haversine_distance(
-            user_loc['lat'], user_loc['lng'],
-            job_loc['lat'], job_loc['lng']
-        )
-        
-        # Heuristic: 1 mile = 2.5 mins (Avg of walking/bus/train mix)
-        # e.g. 5 miles = 12.5 mins. 20 miles = 50 mins.
-        est_time = distance * 2.5
-        
-        # 1. Perfect Zone (Under 50% of max limit) - e.g. 20 mins if limit is 45
-        if est_time <= max_commute * 0.5:
-            return 100
-            
-        # 2. Comfortable Zone (Under limit)
-        if est_time <= max_commute:
-            # Linear decay from 100 to 70
-            return 85
-            
-        # 3. Stretch Zone (Up to 1.5x limit)
-        if est_time <= max_commute * 1.5:
-            return 60
-            
-        # 4. Too far
-        return 0
+         return 0 # Deprecated
 
     def _calculate_skills_score(self, user_skills: Set[str], job_skills: Set[str], description: str) -> int:
         """
@@ -209,7 +194,10 @@ class MatchingEngine:
         desired_roles = prefs.get('roles', [])
         if desired_roles:
             title = job.get('title', '').lower()
-            if not any(role.lower() in title for role in desired_roles):
+            matches = [role.lower() in title for role in desired_roles]
+            if not any(matches):
+                if 'barista' in title: # Only log if it should have matched!
+                     print(f"DEBUG PREF FAIL: Roles={desired_roles} vs Title='{title}'")
                 score = 0 # Strict mismatch
                 
         # Industry/Type (placeholder logic)

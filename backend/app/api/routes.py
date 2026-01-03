@@ -11,6 +11,7 @@ from datetime import datetime
 from flask_jwt_extended import jwt_required, current_user
 
 # Helper replaced by current_user.student_profile via JWT
+from app.tasks import scrape_jobs_task, calculate_matches_task
 
 @api_bp.route('/jobs', methods=['GET'])
 @jwt_required()
@@ -21,7 +22,7 @@ def get_jobs():
 
     # Pagination
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 20, type=int)
+    per_page = request.args.get('per_page', 100, type=int) # Increased default from 20 to 100 for "See All" feel
 
     # Base Query
     query = Job.query.filter_by(is_active=True)
@@ -30,6 +31,27 @@ def get_jobs():
     salary_min = request.args.get('salary_min', type=float)
     if salary_min:
         query = query.filter(Job.salary_min >= salary_min)
+        
+    # Strict Role Filtering (per user request)
+    if student.preferences and student.preferences.preferred_roles:
+        roles = [r.strip() for r in student.preferences.preferred_roles.split(',') if r.strip()]
+        if roles:
+            from sqlalchemy import or_
+            # Construct a flexible OR filter: Title OR Description must contain one of the keywords
+            # For strictness, per user feedback, we MUST only check Title. 
+            # Description often contains "barista coffee available" which causes false positives for "Director" roles.
+            role_filters = []
+            for role in roles:
+                role_filters.append(Job.title.ilike(f"%{role}%"))
+                # role_filters.append(Job.description.ilike(f"%{role}%")) # REMOVED for strictness
+            
+            if role_filters:
+                query = query.filter(or_(*role_filters))
+
+    # Strict Location Filtering REMOVED -> Handled by Matching Score (Distance Penalty)
+    # This allows "Nearby" jobs to appear (with lower scores) instead of being hidden.
+    # if student.preferences and student.preferences.preferred_locations:
+    #    ...
 
     # Sorting (integration with JobMatch)
     # Join with JobMatch to sort by score
@@ -261,6 +283,12 @@ def handle_preferences():
     
     if request.method == 'PUT':
         data = request.json
+        
+        # Debug Logging
+        with open('api_debug.log', 'a') as f:
+             f.write(f"PUT /preferences for Student ID: {student.id} ({student.first_name} {student.last_name})\n")
+             f.write(f"Data: {data}\n")
+             
         if 'min_salary' in data:
             prefs.min_salary = data['min_salary']
         if 'max_commute_time' in data:
@@ -280,8 +308,30 @@ def handle_preferences():
             else:
                 prefs.preferred_locations = locs
             
+                prefs.preferred_locations = locs
+            
+                prefs.preferred_locations = locs
+            
         db.session.commit()
-        return jsonify({"message": "Preferences updated"}), 200
+        
+        # Trigger update in background via Threading + Eager execution
+        import threading
+        def run_update():
+             with current_app.app_context():
+                 try:
+                     print("Starting background update...")
+                     # In EAGER mode, .delay() runs synchronously in this thread
+                     # which is what we want (async from HTTP request, sync in background thread)
+                     scrape_jobs_task.delay() 
+                     # calculate_matches_task is called by scrape_jobs_task, but we call it again to be double sure
+                     # calculate_matches_task.delay() 
+                     print("Background update complete.")
+                 except Exception as e:
+                     print(f"Background update failed: {e}")
+
+        threading.Thread(target=run_update).start()
+
+        return jsonify({"message": "Preferences updated. Refresh in a few seconds to see new matches!"}), 200
 
 @api_bp.route('/profile', methods=['GET', 'PUT'])
 @jwt_required()

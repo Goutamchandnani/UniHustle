@@ -32,6 +32,22 @@ const JobCard = ({ job, onApply, onSave, onDismiss, onClick }) => {
         return 'Fair Match';
     };
 
+    // Extract Location Data
+    // Backend sends breakdown inside job object usually, or we pass it explicitly?
+    // Let's look for it in job.match_breakdown first.
+    let locData = job.match_breakdown?.location_data || {};
+
+    // Badge Styles
+    const getBadgeStyle = (color) => {
+        switch (color) {
+            case 'green': return 'bg-green-100 text-green-800';
+            case 'blue': return 'bg-blue-100 text-blue-800';
+            case 'purple': return 'bg-purple-100 text-purple-800';
+            case 'yellow': return 'bg-yellow-100 text-yellow-800';
+            default: return 'bg-gray-100 text-gray-700';
+        }
+    };
+
     // Determine Schedule Status
     const getScheduleStatus = (analysis) => {
         if (!analysis || analysis.length === 0) {
@@ -59,9 +75,20 @@ const JobCard = ({ job, onApply, onSave, onDismiss, onClick }) => {
             role="article"
             aria-label={`Job listing for ${title} at ${company_name}`}
         >
-            {/* Match Badge */}
-            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border ${getMatchColor(match_score)}`}>
-                {Math.round(match_score)}% • {getMatchLabel(match_score)}
+            {/* Badges Row */}
+            <div className="absolute top-4 right-4 flex gap-2">
+                {/* Location Badge */}
+                {locData.badge && (
+                    <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${getBadgeStyle(locData.badge_color)}`}>
+                        {locData.badge}
+                    </span>
+                )}
+                {/* Match Score */}
+                {match_score > 0 && (
+                    <span className={`px-2 py-1 rounded-md text-xs font-bold border ${getMatchColor(match_score)}`}>
+                        {Math.round(match_score)}%
+                    </span>
+                )}
             </div>
 
             <div className="p-5">
