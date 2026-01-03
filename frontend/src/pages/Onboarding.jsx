@@ -29,8 +29,12 @@ const Onboarding = () => {
     const [prefs, setPrefs] = useState({
         min_salary: 11,
         max_commute_time: 30,
-        preferred_roles: '' // Comma-separated string
+        preferred_roles: '', // Comma-separated string
+        preferred_locations: '' // Comma-separated string
     });
+
+    // Step 3 Data
+    const [scheduleSlots, setScheduleSlots] = useState([]);
 
     const handleProfileChange = (e) => {
         setProfile({ ...profile, [e.target.name]: e.target.value });
@@ -66,11 +70,17 @@ const Onboarding = () => {
         }
     };
 
-    const finishOnboarding = () => {
-        // Step 3 is Timetable, which saves itself via its own internal API calls usually? 
-        // Or we need to make sure user clicked 'Save' on the grid.
-        // For now, assume they did or just let them proceed.
-        navigate('/');
+    const finishOnboarding = async () => {
+        setLoading(true);
+        try {
+            // Save Schedule
+            await api.put('/schedule', scheduleSlots);
+            navigate('/');
+        } catch (e) {
+            console.error(e);
+            alert("Failed to save schedule");
+            setLoading(false);
+        }
     };
 
     return (
@@ -196,6 +206,19 @@ const Onboarding = () => {
                                 </div>
 
                                 <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Preferred Work Locations (Optional)</label>
+                                    <input
+                                        name="preferred_locations"
+                                        value={prefs.preferred_locations}
+                                        onChange={handlePrefsChange}
+                                        type="text"
+                                        className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 p-2 border"
+                                        placeholder="e.g. Leamington Spa, Coventry, Remote"
+                                    />
+                                    <p className="text-xs text-slate-500 mt-1">If set, we'll prioritize jobs in these areas regardless of commute distance.</p>
+                                </div>
+
+                                <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-2">Minimum Hourly Pay: £{prefs.min_salary}</label>
                                     <input
                                         name="min_salary"
@@ -241,13 +264,13 @@ const Onboarding = () => {
 
                             {/* Embed existing component in a contained wrapper */}
                             <div className="border border-slate-200 rounded-lg p-2 h-96 overflow-y-auto">
-                                <TimetableInput embedded={true} />
+                                <TimetableInput embedded={true} onScheduleChange={setScheduleSlots} />
                                 {/* We might need to modify TimetableInput to accept an 'embedded' prop to hide its own header/layout if it has one */}
                             </div>
 
                             <div className="flex gap-4">
-                                <Button onClick={finishOnboarding} className="w-full flex justify-center items-center gap-2">
-                                    Finish & Find Jobs <Check className="w-4 h-4" />
+                                <Button onClick={finishOnboarding} className="w-full flex justify-center items-center gap-2" disabled={loading}>
+                                    {loading ? 'Finishing...' : <>Finish & Find Jobs <Check className="w-4 h-4" /></>}
                                 </Button>
                             </div>
                         </div>

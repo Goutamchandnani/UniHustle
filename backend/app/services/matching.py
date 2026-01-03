@@ -26,10 +26,15 @@ class MatchingEngine:
         )
         schedule_score = schedule_result['score']
 
-        # 2. Location Score (25%)
+        # Extract max_commute and preferred_locations
+        max_commute = student_profile.get('preferences', {}).get('max_commute_time', 45)
+        pref_locs = student_profile.get('preferences', {}).get('locations', [])
+        
         location_score = self._calculate_location_score(
             student_profile.get('location', {}),
-            job_data.get('location', {})
+            job_data.get('location', {}),
+            max_commute=max_commute,
+            preferred_locs=pref_locs
         )
 
         # 3. Skills Score (20%)
@@ -62,6 +67,11 @@ class MatchingEngine:
             (pref_score * self.WEIGHTS['preferences'])
         )
 
+        # "Deanbreaker" Logic: If role preference is completely missed, punish the total score significantly.
+        # This ensures users see "only" (or mostly) what they asked for.
+        if pref_score == 0 and student_profile.get('preferences', {}).get('roles'):
+             total_score *= 0.1 # 90% penalty for role mismatch
+
         return {
             "total_score": round(total_score, 1),
             "breakdown": {
@@ -74,23 +84,44 @@ class MatchingEngine:
             "schedule_analysis": schedule_result['analysis']
         }
 
-    def _calculate_location_score(self, user_loc: Dict, job_loc: Dict) -> int:
+    def _calculate_location_score(self, user_loc: Dict, job_loc: Dict, max_commute: int = 45, preferred_locs: List[str] = None) -> int:
         """
-        Score based on distance.
-        Expects lat/lng in dicts. Returns 0-100.
+        Score based on Estimated Commute Time vs User's Limit.
+        Also overrides if Job Location matches 'Preferred Work Location'.
         """
+        # 0. Override: Explicit Preferred Location
+        if preferred_locs and job_loc.get('name'):
+            job_city = job_loc['name'].lower()
+            for loc in preferred_locs:
+                if loc.lower() in job_city:
+                    return 100 # User explicitly wants to work here 
+
         if not user_loc or not job_loc or not user_loc.get('lat') or not job_loc.get('lat'):
-            return 50 # Neutral if location unknown
+            return 50 # Neutral
         
         distance = self._haversine_distance(
             user_loc['lat'], user_loc['lng'],
             job_loc['lat'], job_loc['lng']
         )
         
-        if distance < 1: return 100
-        if distance < 3: return 85
-        if distance < 5: return 70
-        if distance < 10: return 50
+        # Heuristic: 1 mile = 2.5 mins (Avg of walking/bus/train mix)
+        # e.g. 5 miles = 12.5 mins. 20 miles = 50 mins.
+        est_time = distance * 2.5
+        
+        # 1. Perfect Zone (Under 50% of max limit) - e.g. 20 mins if limit is 45
+        if est_time <= max_commute * 0.5:
+            return 100
+            
+        # 2. Comfortable Zone (Under limit)
+        if est_time <= max_commute:
+            # Linear decay from 100 to 70
+            return 85
+            
+        # 3. Stretch Zone (Up to 1.5x limit)
+        if est_time <= max_commute * 1.5:
+            return 60
+            
+        # 4. Too far
         return 0
 
     def _calculate_skills_score(self, user_skills: Set[str], job_skills: Set[str], description: str) -> int:
@@ -179,7 +210,7 @@ class MatchingEngine:
         if desired_roles:
             title = job.get('title', '').lower()
             if not any(role.lower() in title for role in desired_roles):
-                score -= 50
+                score = 0 # Strict mismatch
                 
         # Industry/Type (placeholder logic)
         return max(0, score)

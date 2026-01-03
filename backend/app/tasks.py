@@ -81,7 +81,9 @@ def calculate_matches_task():
             "min_salary": student.preferences.min_salary if student.preferences else 10.0,
             "skills": skill_set,
             "preferences": {
-                "roles": [r.strip() for r in student.preferences.preferred_roles.split(',')] if student.preferences and student.preferences.preferred_roles else []
+                "roles": [r.strip() for r in student.preferences.preferred_roles.split(',')] if student.preferences and student.preferences.preferred_roles else [],
+                "locations": [l.strip() for l in student.preferences.preferred_locations.split(',')] if student.preferences and student.preferences.preferred_locations else [],
+                "max_commute_time": student.preferences.max_commute_time if student.preferences else 45
             }
         }
         
@@ -91,7 +93,7 @@ def calculate_matches_task():
                 shifts = JobShift.query.filter_by(job_id=job.id).all()
                 
                 job_data = {
-                    "location": {"lat": job.latitude or 51.5, "lng": job.longitude or -0.1},
+                    "location": {"lat": job.latitude or 51.5, "lng": job.longitude or -0.1, "name": job.location},
                     "shifts": [{"day": s.day_of_week, "start": s.start_time, "end": s.end_time} for s in shifts],
                     "salary_min": job.salary_min,
                     "salary_max": job.salary_max,

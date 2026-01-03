@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import TimetableGrid from '../components/TimetableGrid';
 
-const TimetableInput = ({ embedded = false }) => {
+const TimetableInput = ({ embedded = false, onScheduleChange }) => {
     const [initialData, setInitialData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -72,6 +72,8 @@ const TimetableInput = ({ embedded = false }) => {
                         initialData={initialData}
                         onSave={handleSave}
                         loading={saving}
+                        onChange={onScheduleChange}
+                        showControls={!embedded}
                     />
                 </div>
 

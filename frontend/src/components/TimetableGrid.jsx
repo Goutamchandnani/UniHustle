@@ -5,7 +5,7 @@ import Button from './ui/Button';
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 13 }, (_, i) => i + 9); // 9am to 9pm (21:00)
 
-const TimetableGrid = ({ initialData, onSave, loading }) => {
+const TimetableGrid = ({ initialData, onSave, loading, onChange, showControls = true }) => {
     // State: Map of "Day-Hour" string to Activity Type (or null if free)
     // Key format: "Monday-9"
     const [schedule, setSchedule] = useState({});
@@ -29,6 +29,24 @@ const TimetableGrid = ({ initialData, onSave, loading }) => {
             setSchedule(newSchedule);
         }
     }, [initialData]);
+
+    // Lift state up whenever it changes
+    useEffect(() => {
+        if (onChange) {
+            const slots = [];
+            Object.entries(schedule).forEach(([key, type]) => {
+                const [day, hourStr] = key.split('-');
+                const hour = parseInt(hourStr, 10);
+                slots.push({
+                    day_of_week: day,
+                    start_time: `${hour}:00`,
+                    end_time: `${hour + 1}:00`,
+                    activity_type: type
+                });
+            });
+            onChange(slots);
+        }
+    }, [schedule, onChange]);
 
     const toggleSlot = (day, hour) => {
         const key = `${day}-${hour}`;
@@ -141,17 +159,19 @@ const TimetableGrid = ({ initialData, onSave, loading }) => {
                 ))}
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
-                <div className="text-sm text-slate-500">
-                    Click and drag to mark your class times.
+            {showControls && (
+                <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <div className="text-sm text-slate-500">
+                        Click and drag to mark your class times.
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" onClick={() => setSchedule({})}>Clear</Button>
+                        <Button onClick={handleSave} disabled={loading}>
+                            {loading ? 'Saving...' : 'Save Schedule'}
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="ghost" onClick={() => setSchedule({})}>Clear</Button>
-                    <Button onClick={handleSave} disabled={loading}>
-                        {loading ? 'Saving...' : 'Save Schedule'}
-                    </Button>
-                </div>
-            </div>
+            )}
         </div>
     );
 };
